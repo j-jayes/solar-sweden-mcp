@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "solar-sweden-mcp"
+version = "0.1.0"
+description = "MCP server for Swedish solar panel statistics and weather-based generation forecasting"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp>=1.0.0",
+    "fastapi>=0.111.0",
+    "uvicorn[standard]>=0.30.0",
+    "httpx>=0.27.0",
+    "pandas>=2.2.0",
+    "pyarrow>=16.0.0",
+    "openpyxl>=3.1.0",
+    "starlette>=0.37.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "httpx>=0.27.0",
+]
+notebook = [
+    "jupyter>=1.0.0",
+    "matplotlib>=3.9.0",
+    "seaborn>=0.13.0",
+    "plotly>=5.22.0",
+]
+
+[project.scripts]
+solar-mcp = "solar_mcp.server:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
