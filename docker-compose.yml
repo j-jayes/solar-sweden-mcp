@@ -1,0 +1,20 @@
+version: "3.9"
+
+services:
+  solar-mcp:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONIOENCODING=utf-8
+      - LOG_LEVEL=info
+    volumes:
+      # Mount local data directory for development; remove for production
+      - ./data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
