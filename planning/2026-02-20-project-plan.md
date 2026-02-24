@@ -1,6 +1,5 @@
 # Solar Sweden MCP — Project Plan
 **Date:** 2026-02-20  
-**Client:** Affärsverken, Karlskrona  
 **Goal:** Demonstrate MCP + Copilot Studio with real Swedish solar & weather data
 
 ---
@@ -198,11 +197,11 @@ solar-sweden-mcp/
 | Phase | Scope | Status |
 |-------|-------|--------|
 | 0 | Project skeleton, planning doc | ✅ Done |
-| 1 | Data loading (static + API), formula utils | 🔄 In progress |
-| 2 | Three MCP tools implemented | 🔄 In progress |
-| 3 | FastAPI + MCP server wired up | 🔄 In progress |
-| 4 | Docker build & Azure deploy | ⬜ Pending |
-| 5 | Quarto presentation | 🔄 In progress |
+| 1 | Data loading (static + API), formula utils | ✅ Done |
+| 2 | Three MCP tools implemented | ✅ Done |
+| 3 | FastAPI + MCP server wired up | ✅ Done |
+| 4 | Docker build & Azure deploy | ✅ Done (scripts in `deploy/`) |
+| 5 | Quarto presentation | ✅ Done |
 | 6 | Copilot Studio integration test | ⬜ Pending |
 | 7 | Polish & live demo rehearsal | ⬜ Pending |
 
@@ -211,7 +210,7 @@ solar-sweden-mcp/
 ## 11. Open Questions / Next Steps
 
 - [ ] Download actual Energimyndigheten Excel files and run `scripts/process_solar_data.py` to generate Parquet
-- [ ] Validate SMHI API parameter names against a live API response
+- [x] Validate SMHI API parameter names against a live API response — confirmed: `t`, `Wsymb2`, `lcc_mean`, `mcc_mean`, `hcc_mean` all present; forecast spans ~9.5 days at mixed 1h/6h/12h intervals
 - [ ] Confirm whether Copilot Studio uses SSE or Streamable HTTP — test both
 - [ ] Decide on Azure Container App tier for demo day (min 1 replica to avoid cold start)
 - [ ] Add authentication layer if demo requires private endpoint

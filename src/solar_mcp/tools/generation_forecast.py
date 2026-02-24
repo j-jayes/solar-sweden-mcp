@@ -45,7 +45,7 @@ def compare_generation_forecast(
         avg_clearness, weather_summary,
         summary (str)
     """
-    days_ahead = max(1, min(10, days_ahead))
+    days_ahead = max(1, min(9, days_ahead))
 
     # --- Solar installation data ---
     df = get_municipality_data(municipality_name)

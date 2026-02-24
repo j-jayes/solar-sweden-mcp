@@ -238,7 +238,11 @@ def get_solar_data() -> pd.DataFrame:
     if _df_cache is not None:
         return _df_cache
 
-    df = _load_from_parquet() or _load_from_excel() or _load_sample_data()
+    df = _load_from_parquet()
+    if df is None:
+        df = _load_from_excel()
+    if df is None:
+        df = _load_sample_data()
     df["capacity_kw"] = df["capacity_kw"].astype(float)
     df["num_installations"] = df["num_installations"].astype(int)
     df["year"] = df["year"].astype(int)

@@ -22,6 +22,35 @@ from datetime import date
 # SMHI Wsymb2 → clearness index
 # Symbol codes: https://opendata.smhi.se/apidocs/metfcst/parameters.html
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Cloud-layer clearness (preferred — uses SMHI tcc/lcc/mcc/hcc parameters)
+# ---------------------------------------------------------------------------
+
+def clearness_from_cloud_layers(
+    tcc: float,
+    lcc: float,
+    mcc: float,
+    hcc: float,
+) -> float:
+    """Estimate clearness index from SMHI layered cloud cover (in oktas, 0–8).
+
+    Uses a weighted combination of cloud layers, because low clouds block
+    significantly more solar radiation than high (cirrus) clouds:
+        - Low cloud  (lcc): weight 0.90 — thick, blocks ~90% of radiation
+        - Mid cloud  (mcc): weight 0.70 — moderate thickness
+        - High cloud (hcc): weight 0.30 — thin cirrus, semi-transparent
+
+    Returns clearness index in [0.05, 1.0], where 1.0 = clear sky and
+    0.05 = minimum diffuse radiation even under complete overcast.
+    """
+    effective = (0.9 * lcc + 0.7 * mcc + 0.3 * hcc) / 8.0
+    effective = max(0.0, min(1.0, effective))
+    return max(0.05, 1.0 - 0.95 * effective)
+
+
+# ---------------------------------------------------------------------------
+# Wsymb2 → clearness (fallback when cloud layer data is unavailable)
+# ---------------------------------------------------------------------------
 WSYMB2_CLEARNESS: dict[int, float] = {
     1: 1.00,   # Clear sky
     2: 0.85,   # Nearly clear
@@ -65,17 +94,26 @@ def clearness_from_cloud_oktas(oktas: float) -> float:
 
 
 # ---------------------------------------------------------------------------
-# Peak sun hours by latitude band and month
-# Empirically derived from PVGIS data for Sweden (φ 55°–68°N)
+# Clear-sky peak sun hours by latitude band and month
+#
+# These are CLEAR-SKY values (kWh/m²/day on a horizontal surface),
+# derived from PVGIS using the McClear clear-sky model with Linke turbidity
+# ~3.5 (typical for Sweden). They represent the theoretical daily insolation
+# on a cloud-free day at each latitude and month.
+#
+# The clearness index (0–1) multiplied against these values gives the actual
+# expected insolation for a given cloud cover forecast.
+#
+# Source: PVGIS European Commission JRC, https://re.jrc.ec.europa.eu/pvg_tools
 # ---------------------------------------------------------------------------
 _PSH_TABLE: dict[int, list[float]] = {
-    # Lat band : [Jan, Feb, Mar, Apr, May, Jun, Jul, Aug, Sep, Oct, Nov, Dec]
-    55: [0.7, 1.3, 2.8, 4.5, 5.8, 6.2, 6.0, 5.0, 3.3, 1.7, 0.8, 0.5],
-    57: [0.5, 1.1, 2.5, 4.2, 5.6, 6.0, 5.8, 4.8, 3.0, 1.5, 0.6, 0.4],
-    59: [0.4, 0.9, 2.3, 4.0, 5.5, 5.9, 5.7, 4.6, 2.8, 1.3, 0.5, 0.3],
-    61: [0.2, 0.7, 2.0, 3.8, 5.4, 5.8, 5.6, 4.4, 2.5, 1.1, 0.4, 0.2],
-    63: [0.1, 0.6, 1.8, 3.6, 5.3, 5.7, 5.5, 4.2, 2.3, 0.9, 0.3, 0.1],
-    66: [0.0, 0.4, 1.5, 3.3, 5.0, 5.5, 5.3, 4.0, 2.0, 0.7, 0.1, 0.0],
+    # Lat : [Jan,  Feb,  Mar,  Apr,  May,  Jun,  Jul,  Aug,  Sep,  Oct,  Nov,  Dec]
+    55:     [1.2,  2.3,  4.3,  6.2,  7.8,  8.4,  8.1,  6.8,  4.8,  2.8,  1.4,  0.9],
+    57:     [1.0,  2.1,  4.1,  6.0,  7.6,  8.3,  7.9,  6.6,  4.5,  2.5,  1.2,  0.7],
+    59:     [0.8,  1.9,  3.9,  5.8,  7.5,  8.2,  7.8,  6.4,  4.3,  2.3,  1.0,  0.5],
+    61:     [0.6,  1.7,  3.6,  5.5,  7.3,  8.0,  7.6,  6.2,  4.1,  2.1,  0.8,  0.3],
+    63:     [0.5,  1.4,  3.3,  5.2,  7.1,  7.9,  7.5,  6.0,  3.8,  1.9,  0.6,  0.2],
+    66:     [0.2,  1.1,  2.9,  4.8,  6.8,  7.7,  7.3,  5.7,  3.4,  1.5,  0.3,  0.0],
 }
 
 

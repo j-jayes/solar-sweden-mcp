@@ -46,7 +46,7 @@ def find_optimal_solar_region(days_ahead: int = 7) -> dict[str, Any]:
         rankings (list of dicts)      – all candidates ranked by generation
         insight (str)                 – narrative comparison paragraph
     """
-    days_ahead = max(1, min(10, days_ahead))
+    days_ahead = max(1, min(9, days_ahead))
 
     # Load latest installed capacity per municipality
     df = get_solar_data()

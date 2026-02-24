@@ -16,7 +16,7 @@ from typing import Any
 
 import httpx
 
-from solar_mcp.utils.solar_formula import clearness_from_wsymb2
+from solar_mcp.utils.solar_formula import clearness_from_cloud_layers, clearness_from_wsymb2
 
 logger = logging.getLogger(__name__)
 
@@ -107,13 +107,36 @@ def fetch_forecast(lat: float, lon: float) -> list[dict]:
         params = entry.get("parameters", [])
         wsymb2 = int(_extract_parameter(params, "Wsymb2") or 3)
         temp = _extract_parameter(params, "t")
+
+        # Cloud layer cover in oktas (0–8).  All four are always present in
+        # pmp3g, but we fall back gracefully if any are missing.
+        tcc = _extract_parameter(params, "tcc_mean") or 0.0
+        lcc = _extract_parameter(params, "lcc_mean") or 0.0
+        mcc = _extract_parameter(params, "mcc_mean") or 0.0
+        hcc = _extract_parameter(params, "hcc_mean") or 0.0
+
+        # Prefer the physically-based cloud-layer clearness; fall back to
+        # Wsymb2 proxy only if no layer data is available.
+        if tcc > 0 or lcc > 0 or mcc > 0 or hcc > 0:
+            clearness = clearness_from_cloud_layers(tcc, lcc, mcc, hcc)
+        else:
+            clearness = clearness_from_wsymb2(wsymb2)
+
         records.append(
             {
                 "valid_time": _parse_time(entry["validTime"]),
                 "wsymb2": wsymb2,
                 "temperature": temp,
                 "t": temp,
-                "clearness": clearness_from_wsymb2(wsymb2),
+                # Cloud cover in oktas (for downstream use)
+                "tcc_mean": tcc,
+                "lcc_mean": lcc,
+                "mcc_mean": mcc,
+                "hcc_mean": hcc,
+                # Clearness index using weighted cloud layers (preferred)
+                "clearness": clearness,
+                # Wsymb2-based clearness kept for reference / comparison
+                "clearness_wsymb2": clearness_from_wsymb2(wsymb2),
             }
         )
 

@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m pytest:*)",
+      "Bash(uv venv:*)",
+      "Bash(uv pip install:*)",
+      "Bash(uv run pytest:*)",
+      "Bash(.venv/Scripts/python -m pytest tests/ -v --tb=short)",
+      "Bash(.venv/Scripts/python.exe -m pytest:*)",
+      "Bash(timeout:*)",
+      "Bash(.venv/Scripts/python.exe:*)",
+      "Bash(.venv/Scripts/pip show:*)",
+      "Bash(uv pip show:*)",
+      "Bash(az account show:*)",
+      "Bash(APP_URL=\"solar-mcp.thankfulglacier-f4abeca6.swedencentral.azurecontainerapps.io\")",
+      "Bash(curl:*)",
+      "WebFetch(domain:medium.com)",
+      "WebFetch(domain:pxexternal.energimyndigheten.se)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(.venv/Scripts/pip install:*)",
+      "Bash(uv sync:*)",
+      "Bash(uv run:*)",
+      "Bash(.venv/Scripts/playwright install:*)",
+      "Bash(python -m playwright install:*)",
+      "Bash(echo:*)",
+      "Bash(python scripts/download_geo.py:*)",
+      "Bash(python scripts/download_solar_data.py:*)",
+      "Bash(.venv/Scripts/python:*)",
+      "Bash(PYTHONPATH=src .venv/Scripts/python:*)",
+      "Bash(az group list:*)",
+      "Bash(az acr list:*)",
+      "Bash(az containerapp list:*)",
+      "Bash(az containerapp env list:*)",
+      "Bash(az containerapp show:*)",
+      "Bash(export MSYS_NO_PATHCONV=1)",
+      "Bash(az acr build:*)",
+      "Bash(az acr task logs:*)",
+      "Bash(az acr repository show:*)"
+    ]
+  }
+}

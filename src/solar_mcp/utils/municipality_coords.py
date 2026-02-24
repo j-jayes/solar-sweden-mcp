@@ -15,7 +15,7 @@ from typing import Optional
 # Core coordinate dictionary – 50 most solar-relevant municipalities
 # ---------------------------------------------------------------------------
 MUNICIPALITY_COORDS: dict[str, tuple[float, float]] = {
-    # Blekinge (Affärsverken's home county)
+    # Blekinge
     "Karlskrona": (56.1612, 15.5869),
     "Karlshamn": (56.1704, 14.8637),
     "Ronneby": (56.2104, 15.2782),
