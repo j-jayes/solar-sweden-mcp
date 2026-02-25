@@ -33,6 +33,18 @@ from solar_mcp.data.energimyndigheten import get_solar_data
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
+# In-memory PNG cache (keyed by year) — avoids re-running Playwright when
+# the /maps/{year}.png endpoint is called shortly after the MCP tool.
+# ---------------------------------------------------------------------------
+_png_cache: dict[int, bytes] = {}
+
+
+def get_cached_png(year: int) -> bytes | None:
+    """Return cached PNG bytes for *year*, or None if not yet generated."""
+    return _png_cache.get(year)
+
+
+# ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -41,9 +53,10 @@ _GEO_PATH = _REPO_ROOT / "data" / "geo" / "municipalities.geojson"
 # ---------------------------------------------------------------------------
 # Screenshot settings
 # ---------------------------------------------------------------------------
-# 900×700 with tiles=None (no tile server) produces ~250–450 KB PNG for Sweden.
-_VIEWPORT_W = 900
-_VIEWPORT_H = 700
+# 1600×900 (16:9 landscape) matches Copilot Studio's image display ratio so
+# the full map is visible without top/bottom cropping.
+_VIEWPORT_W = 1600
+_VIEWPORT_H = 900
 
 
 # ---------------------------------------------------------------------------
@@ -135,48 +148,68 @@ def _enrich_geojson(
 # Map building
 # ---------------------------------------------------------------------------
 def _build_folium_map(enriched_geojson: dict, year: int) -> folium.Map:
-    """Build a folium choropleth centred on Sweden with no external tile server."""
+    """Build a folium map centred on Sweden with viridis colouring.
+
+    Uses fit_bounds() so Leaflet auto-calculates the zoom that fits all of
+    Sweden (55°N–70°N, 10°E–25°E) within the 1600×900 viewport — no manual
+    zoom tuning needed.  Viridis is applied via branca.LinearColormap +
+    GeoJson style_function because folium.Choropleth.fill_color only accepts
+    ColorBrewer palette names.
+    """
+    import branca.colormap as cm
+
     m = folium.Map(
-        location=[62.5, 16.5],  # Geographic centre of Sweden
-        zoom_start=5,
-        tiles=None,          # No tile requests — fast and deterministic
+        location=[63.0, 16.5],
+        zoom_start=5,        # overridden by fit_bounds below
+        tiles=None,          # no tile server — fast and deterministic
         prefer_canvas=True,
     )
 
-    # DataFrame used by folium.Choropleth for data binding
-    df_cap = pd.DataFrame(
-        [
-            {
-                "id": str(feat["properties"].get("id", "")),
-                "capacity_kw": feat["properties"]["capacity_kw"],
-            }
-            for feat in enriched_geojson["features"]
-        ]
+    # fit_bounds tells Leaflet to zoom/pan so the full Sweden bounding box
+    # is visible with a small margin inside the 1600×900 viewport.
+    # [SW corner, NE corner] — slight padding outside Sweden's actual extent.
+    m.fit_bounds([[54.5, 9.5], [70.0, 25.5]])
+
+    # Use the 95th-percentile as vmax so the colour scale isn't dominated by
+    # one or two outlier cities — smaller municipalities show meaningful colour.
+    values = sorted(
+        feat["properties"].get("capacity_kw", 0) or 0
+        for feat in enriched_geojson["features"]
+    )
+    vmax = values[int(len(values) * 0.95)] if values else 1.0
+    if vmax <= 0:
+        vmax = 1.0
+
+    # Viridis: dark-purple (low) → blue → teal → green → yellow (high)
+    colormap = cm.LinearColormap(
+        colors=["#440154", "#3b528b", "#21918c", "#5ec962", "#fde725"],
+        vmin=0,
+        vmax=vmax,
+        caption=f"Installerad soleffekt (kW) — {year}",
     )
 
-    choropleth = folium.Choropleth(
-        geo_data=enriched_geojson,
-        data=df_cap,
-        columns=["id", "capacity_kw"],
-        key_on="feature.properties.id",
-        fill_color="YlOrRd",
-        fill_opacity=0.8,
-        line_opacity=0.3,
-        line_color="#666666",
-        legend_name=f"Installed Solar Capacity (kW) — {year}",
-        nan_fill_color="#e8e8e8",
-        nan_fill_opacity=0.6,
-    )
-    choropleth.add_to(m)
+    def _style(feature: dict) -> dict:
+        raw = feature["properties"].get("capacity_kw", 0) or 0
+        clamped = min(float(raw), vmax)
+        return {
+            "fillColor": colormap(clamped),
+            "fillOpacity": 0.85,
+            "color": "#555555",
+            "weight": 0.4,
+        }
 
-    # Tooltip showing municipality name and capacity on hover
-    folium.GeoJsonTooltip(
-        fields=["kom_namn", "capacity_kw"],
-        aliases=["Municipality:", "Capacity (kW):"],
-        localize=True,
-        sticky=False,
-    ).add_to(choropleth.geojson)
+    folium.GeoJson(
+        enriched_geojson,
+        style_function=_style,
+        tooltip=folium.GeoJsonTooltip(
+            fields=["kom_namn", "capacity_kw"],
+            aliases=["Kommun:", "Effekt (kW):"],
+            localize=True,
+            sticky=False,
+        ),
+    ).add_to(m)
 
+    m.add_child(colormap)
     return m
 
 
@@ -310,6 +343,7 @@ def get_solar_map(year: int | None = None) -> SolarMapResult:
     try:
         img_bytes, mime = _screenshot_map(folium_map)
         logger.info("Screenshot: %d bytes, %s", len(img_bytes), mime)
+        _png_cache[year] = img_bytes  # cache so /maps/{year}.png is instant
         return SolarMapResult(summary=summary, image_bytes=img_bytes, mime_type=mime)
     except ImportError:
         logger.warning("Playwright not available — returning text summary only")

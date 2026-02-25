@@ -12,6 +12,9 @@ format:
     chalkboard: false
     highlight-style: github
     code-fold: false
+    self-contained-math: true
+    embed-resources: true
+
 execute:
   echo: true
   warning: false

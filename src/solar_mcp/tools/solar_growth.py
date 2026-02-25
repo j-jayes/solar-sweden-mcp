@@ -23,7 +23,7 @@ def get_solar_growth(municipality_name: str) -> dict[str, Any]:
         municipality (str)
         data (list of yearly records)
         yoy_growth (list of year-over-year % growth in capacity)
-        cagr_5y (float | None): 5-year CAGR in %
+        cagr (float | None): compound annual growth rate over the full data range, in %
         latest_year (int)
         latest_capacity_kw (float)
         latest_installations (int)
@@ -57,14 +57,14 @@ def get_solar_growth(municipality_name: str) -> dict[str, Any]:
             }
         )
 
-    # 5-year CAGR
-    cagr_5y: float | None = None
+    # CAGR over the full data range
+    cagr: float | None = None
     if len(rows) >= 2:
         first = rows[0]
         last = rows[-1]
         n_years = last["year"] - first["year"]
         if n_years > 0 and first["capacity_kw"] > 0:
-            cagr_5y = round(
+            cagr = round(
                 ((last["capacity_kw"] / first["capacity_kw"]) ** (1 / n_years) - 1) * 100, 1
             )
 
@@ -80,17 +80,17 @@ def get_solar_growth(municipality_name: str) -> dict[str, Any]:
         summary_parts.append(
             f"Capacity grew by {most_recent_yoy:.1f}% in {latest['year']} compared to the previous year."
         )
-    if cagr_5y is not None:
+    if cagr is not None:
         n = rows[-1]["year"] - rows[0]["year"]
         summary_parts.append(
-            f"The {n}-year compound annual growth rate (CAGR) of installed capacity is {cagr_5y:.1f}%."
+            f"The {n}-year compound annual growth rate (CAGR) of installed capacity is {cagr:.1f}%."
         )
 
     return {
         "municipality": municipality_name,
         "data": rows,
         "yoy_growth": yoy,
-        "cagr": cagr_5y,
+        "cagr": cagr,
         "latest_year": latest["year"],
         "latest_capacity_kw": latest["capacity_kw"],
         "latest_installations": latest["num_installations"],

@@ -35,7 +35,12 @@
       "Bash(export MSYS_NO_PATHCONV=1)",
       "Bash(az acr build:*)",
       "Bash(az acr task logs:*)",
-      "Bash(az acr repository show:*)"
+      "Bash(az acr repository show:*)",
+      "WebFetch(domain:tuong.io)",
+      "WebFetch(domain:github.com)",
+      "Bash(MSYS_NO_PATHCONV=1 az acr build:*)",
+      "WebFetch(domain:www.home-assistant.io)",
+      "WebFetch(domain:mgrey.se)"
     ]
   }
 }
