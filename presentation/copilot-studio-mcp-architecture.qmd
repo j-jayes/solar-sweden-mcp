@@ -1,0 +1,50 @@
+---
+title: "Building the Solar Sweden Agent"
+subtitle: "Configuring Copilot Studio & MCP"
+author: "Demo Presentation"
+format:
+  revealjs:
+    theme: default
+    slide-number: true
+    embed-resources: true
+    code-fold: false
+execute:
+  echo: true
+  warning: false
+---
+
+## System instructions give the AI its persona and rules
+
+- **Persona:** "Solar Sverige" — a specialized assistant for Swedish solar data and electricity markets.
+- **Language:** Enforces Swedish responses regardless of the user's input language.
+- **Formatting:** Prefers concise text with bolding over long bullet points.
+- **Guardrails:** Instructed to *never* guess numbers ("Hämta alltid aktuell data via verktygen — gissa inte på siffror").
+
+## MCP acts as the bridge between Copilot and our real-world APIs
+
+```{mermaid}
+flowchart LR
+    User["User 👤"] --> CS["Copilot Studio\n(AI Agent)"]
+    CS <-->|MCP Protocol\n(Streamable HTTP / SSE)| Server["Solar MCP Server\n(Azure Container App)"]
+    
+    Server -->|Local Parquet| EM["Energimyndigheten\n(2016-2024 Data)"]
+    Server -->|Live REST API| SMHI["SMHI Open Data\n(9-day weather)"]
+    Server -->|Live REST API| NP["Nord Pool\n(Spot Prices SE1-SE4)"]
+```
+
+## Eight custom tools translate natural language into specific data tasks
+
+Instead of writing scripts, the AI decides which tool to call:
+
+- **Historical Data:** `get_solar_growth`, `get_fastest_growth`, `get_solar_map`
+- **Weather Projections:** `compare_generation_forecast`, `find_optimal_solar_region` 
+- **Market Prices:** `get_electricity_prices`, `list_zone_border_municipalities`
+- **Combined Analysis:** `estimate_solar_revenue` (Combines capacity, weather, and price)
+
+## Live Demo: Natural language questions become instant data insights
+
+::: {style="text-align: center; margin-top: 15%;"}
+### Switching to Copilot Studio...
+
+*Let's see the agent in action.*
+:::

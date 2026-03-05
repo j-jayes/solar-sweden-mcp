@@ -14,7 +14,7 @@ An MCP (Model Context Protocol) server that combines Swedish solar panel install
 | MCP (SSE fallback) | `https://solar-mcp.thankfulglacier-f4abeca6.swedencentral.azurecontainerapps.io/sse` |
 | Health check | `https://solar-mcp.thankfulglacier-f4abeca6.swedencentral.azurecontainerapps.io/health` |
 
-**Copilot Studio setup:** Topics → Add action → MCP → paste the `/mcp` URL above → all 4 tools are auto-discovered.
+**Copilot Studio setup:** Topics → Add action → MCP → paste the `/mcp` URL above → all 8 tools are auto-discovered.
 
 ---
 
@@ -23,27 +23,33 @@ An MCP (Model Context Protocol) server that combines Swedish solar panel install
 | Question | Tool |
 |----------|------|
 | *"How fast has solar grown in Karlskrona?"* | `get_solar_growth` |
+| *"Which municipality is growing the fastest?"* | `get_fastest_growth` |
 | *"How much power will clouds cost us this week?"* | `compare_generation_forecast` |
 | *"Which region will generate the most solar power next week?"* | `find_optimal_solar_region` |
 | *"Show me a map of solar capacity across Sweden"* | `get_solar_map` |
+| *"What are the electricity spot prices in SE3 tomorrow?"* | `get_electricity_prices` |
+| *"Which municipalities are on the border of SE3 and SE4?"* | `list_zone_border_municipalities` |
+| *"How much is Karlskrona's solar production worth today?"* | `estimate_solar_revenue` |
 
 ---
 
 ## Tools
 
-### `get_solar_growth`
-Returns historical capacity growth for any Swedish municipality: year-over-year percentages and CAGR since 2016.
+### Historical Solar Data (Energimyndigheten)
+- **`get_solar_growth`**: Returns historical capacity growth for any Swedish municipality: year-over-year percentages and CAGR since 2016.
+- **`get_fastest_growth`**: Ranks all municipalities by the fastest growth rate in solar panel installations between two given years.
+- **`get_solar_map`**: Returns a choropleth PNG map of Sweden coloured by installed solar capacity (kW) by municipality, plus a JSON summary with national totals and the top 10 municipalities.
 
-Example: Karlskrona grew from **1,640 kW** (2016) to **54,810 kW** (2024) — a 55% CAGR.
+### Weather & Generation Forecasts (SMHI)
+- **`compare_generation_forecast`**: Compares expected generation over the coming days against a perfect clear-sky scenario, showing the cloud-cover penalty in kWh and percentage.
+- **`find_optimal_solar_region`**: Ranks 15 municipalities by (1) sunniest forecast and (2) highest expected generation.
 
-### `compare_generation_forecast`
-Compares expected generation over the coming days against a perfect clear-sky scenario, showing the cloud-cover penalty in kWh and percentage.
+### Electricity Prices (Nord Pool)
+- **`get_electricity_prices`**: Returns Nord Pool day-ahead electricity spot prices for the four Swedish pricing zones (SE1–SE4).
+- **`list_zone_border_municipalities`**: Lists municipalities that sit on the border between electricity pricing zones, useful for cross-border price comparisons.
 
-### `find_optimal_solar_region`
-Ranks 15 municipalities by (1) sunniest forecast and (2) highest expected generation — revealing whether the sunniest region actually generates the most power (it usually doesn't, because capacity dominates).
-
-### `get_solar_map`
-Returns a choropleth PNG map of Sweden coloured by installed solar capacity (kW) by municipality, plus a JSON summary with national totals and the top 10 municipalities.
+### Combined Analysis
+- **`estimate_solar_revenue`**: Combines SMHI weather forecasts, installed solar capacity, and Nord Pool electricity spot prices to estimate the financial value of a municipality's solar generation for a specific day.
 
 ---
 
@@ -51,6 +57,7 @@ Returns a choropleth PNG map of Sweden coloured by installed solar capacity (kW)
 
 - **[Energimyndigheten](https://www.energimyndigheten.se/statistik/officiell-energistatistik/tillforsel-och-anvandning/natanslutna-solcellsanlaggningar/)** — 290 municipalities × 9 years (2016–2024), downloaded via PxWeb API and cached as Parquet. National capacity grew from **134 MW → 4,808 MW** over this period.
 - **[SMHI Open Data](https://opendata.smhi.se/apidocs/metfcst/index.html)** — free 9-day point weather forecast (CC BY 4.0). Clearness is derived from weighted cloud-layer cover (lcc/mcc/hcc), not just the weather symbol.
+- **[Nord Pool via mgrey.se](https://mgrey.se)** — day-ahead electricity spot prices (SE1-SE4). Tomorrow's prices are typically available after 13:00 CET.
 - **[okfse/sweden-geojson](https://github.com/okfse/sweden-geojson)** — 290-feature GeoJSON for choropleth maps.
 
 ---
@@ -70,7 +77,7 @@ Enter the server URL:
 https://solar-mcp.thankfulglacier-f4abeca6.swedencentral.azurecontainerapps.io/mcp
 ```
 
-Copilot Studio will connect and auto-discover all 4 tools. No authentication is required.
+Copilot Studio will connect and auto-discover all 8 tools. No authentication is required.
 
 ### 3. Server description
 
@@ -78,42 +85,26 @@ When prompted for a server name and description, use:
 
 > **Name:** Solar Sweden MCP
 >
-> **Description:** Provides real-time and historical data about solar panel installations across Swedish municipalities. Use it to answer questions about solar capacity growth, weather-adjusted generation forecasts, regional comparisons, and to generate visual choropleth maps of Sweden's solar infrastructure. Data covers all 290 Swedish municipalities from 2016 to 2024, with live 9-day weather forecasts from SMHI.
+> **Description:** Provides real-time and historical data about solar panel installations across Swedish municipalities. Use it to answer questions about solar capacity growth, weather-adjusted generation forecasts, Nord Pool electricity prices, regional comparisons, and to generate visual choropleth maps of Sweden's solar infrastructure. Data covers all 290 Swedish municipalities from 2016 to 2024, with live weather from SMHI and spot prices from Nord Pool.
 
 ### 4. Agent instructions
 
-Add the following to your agent's **Instructions** field to give it the right context:
+Add the following to your agent's **Instructions** field to give it the right context (you can see the full Swedish instructions in `copilot-studio-instructions.md`):
 
 ```
-You are a Swedish solar energy assistant with access to real data from
-Energimyndigheten (Swedish Energy Agency) and live weather forecasts from
-SMHI (Swedish Meteorological and Hydrological Institute).
+Du är Solar Sverige, en specialiserad assistent för solenergidata och 
+elmarknadsanalys i Sverige. Svara alltid på svenska.
 
-You can answer questions about:
-- How solar panel capacity has grown in any Swedish municipality since 2016
-- How much electricity a municipality is forecast to generate over the next
-  1–9 days, compared to what it would generate under clear skies
-- Which municipalities are currently the sunniest, and which will generate
-  the most total electricity (these are often different, because a cloudier
-  city with much more installed capacity can outproduce a sunnier one)
-- A visual map of Sweden showing installed solar capacity by municipality
+Du kan svara på frågor om:
+- Hastigheten för solcellsutbyggnad i specifika kommuner
+- Den förväntade elproduktionen (kWh) för de kommande dagarna
+- Elpriser från Nord Pool (SE1-SE4)
+- Beräknade intäkter för solenergi i en kommun
+- Kartor över solkapaciteten i Sverige
 
-When a user asks about a municipality, always call the appropriate tool and
-present the key numbers clearly. For generation forecasts, emphasise both the
-absolute kWh figure and the cloud-loss percentage so the user understands the
-weather impact.
-
-When presenting the solar map, always render the image using the
-map_image_url field from the JSON response. Output it as a markdown image
-on its own line, like this:
-![Solar Capacity Map of Sweden 2024](map_image_url_value)
-Then summarise the top municipalities and national total from the JSON.
-Do not say "I cannot display images" — the map_image_url is a real PNG
-served by the MCP server and will render in the chat.
-
-Swedish municipality names with special characters (Malmö, Göteborg, Örebro,
-etc.) are handled automatically — you can use the anglicised spelling if needed
-(Malmo, Goteborg, Orebro).
+När du visar ett kart-URL från get_solar_map, rendera det alltid som en inbäddad 
+bild med markdown-syntaxen ![karta](url). Säg inte "Jag kan inte visa bilder" - 
+bilden är en renderad PNG som fungerar i chatten.
 ```
 
 ### 5. Test it
@@ -121,10 +112,12 @@ etc.) are handled automatically — you can use the anglicised spelling if neede
 Use the **Test** pane in Copilot Studio with these example prompts:
 
 - *"How fast has solar grown in Karlskrona?"*
+- *"Which municipality grew the fastest between 2020 and 2024?"*
 - *"What will Göteborg generate this week compared to clear-sky conditions?"*
+- *"What are the current electricity spot prices in SE3?"*
+- *"How much is Malmö's solar expected to earn tomorrow based on the Nord Pool spot price?"*
 - *"Which Swedish city will generate the most solar power over the next 7 days?"*
 - *"Show me a map of solar capacity across Sweden"*
-- *"Is Gotland sunnier than Stockholm right now?"*
 
 ---
 
@@ -166,10 +159,13 @@ solar-sweden-mcp/
 ├── src/solar_mcp/
 │   ├── server.py                ← FastAPI + MCP (Streamable HTTP + SSE)
 │   ├── tools/
-│   │   ├── solar_growth.py
+│   │   ├── electricity_prices.py
 │   │   ├── generation_forecast.py
+│   │   ├── growth_ranking.py
 │   │   ├── optimal_region.py
-│   │   └── solar_map.py         ← folium choropleth + Playwright screenshot
+│   │   ├── solar_growth.py
+│   │   ├── solar_map.py         ← folium choropleth + Playwright screenshot
+│   │   └── solar_revenue.py     ← combined Nord Pool + SMHI analysis
 │   ├── data/
 │   │   ├── energimyndigheten.py ← parquet loader
 │   │   └── smhi_client.py       ← SMHI API client + 30-min TTL cache
@@ -203,4 +199,5 @@ The current deployment runs on **Azure Container Apps** (Sweden Central), 1 CPU 
 ## See Also
 
 - [Project Plan](planning/2026-02-20-project-plan.md)
-- [Quarto Presentation](presentation/solar-sweden-mcp.qmd)
+- [Quarto Presentation: Deep Dive](presentation/solar-sweden-mcp.qmd)
+- [Quarto Presentation: Copilot Architecture](presentation/copilot-studio-mcp-architecture.qmd)
